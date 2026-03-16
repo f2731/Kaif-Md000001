@@ -19,3 +19,41 @@
   <a href="https://heroku.com/deploy?template=https://github.com/KaifxChaudhary-dev/Kaif-Md">
     <img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy to Heroku" height="40">
   </a>
+## 💻 Local Setup
+
+```bash
+# Clone repository
+git clone https://github.com/KaifxChaudhary-dev/Kaif-Md.git
+
+# Go to directory
+cd Kaid-Md
+
+# Install dependencies
+npm install
+
+# Start bot
+npm start
+```
+
+After starting, open http://localhost:3000 in your browser.
+
+---
+
+🛠️ Environment Variables
+
+Variable Description
+MONGODB_URI MongoDB connection string
+SESSION_ID Session ID for authentication
+SOURCE_JIDS Source groups/chats to monitor
+TARGET_JIDS Target groups/chats to forward
+OLD_TEXT_REGEX Regex patterns to replace
+NEW_TEXT Replacement text
+
+---
+
+📁 Repository
+
+```
+https://github.com/KaifxChaudhary-dev/Kaif-Md
+```
+
