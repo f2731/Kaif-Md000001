@@ -1,7 +1,7 @@
 /**
- * ⚡ WASI-LIGHT-MD ⚡
+ * ⚡ KAIF MD AUTOFORWARD BOT ⚡
  * Cleaner Utility
- * Powered by Mr Wasi (ixxwasi)
+ * Developed by Mr Wasi (ixxwasi)
  */
 function escapeRegex(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 

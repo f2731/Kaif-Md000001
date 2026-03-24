@@ -1,5 +1,5 @@
 {
-  "name": "WASI-LIGHT-MD",
+  "name": "kaif-md-autoforward-bot",
   "version": "1.0.0",
   "description": "Powerful, Light & Stable WhatsApp Bot by Mr Wasi",
   "main": "index.js",

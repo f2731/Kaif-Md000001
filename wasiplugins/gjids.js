@@ -1,7 +1,7 @@
 /**
- * ⚡ WASI-LIGHT-MD ⚡
+ * ⚡ KAIF MD AUTOFORWARD BOT ⚡
  * Groups JID Utility
- * Powered by Mr Wasi (ixxwasi)
+ * Developed by Mr Wasi (ixxwasi)
  */
 module.exports = {
     name: 'gjids',

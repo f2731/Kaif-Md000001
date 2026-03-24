@@ -1,3 +1,8 @@
+/**
+ * ⚡ KAIF MD AUTOFORWARD BOT ⚡
+ * Auto-Forward Command
+ * Developed by Mr Wasi (ixxwasi)
+ */
 const { wasi_updateGroupSettings, wasi_getGroupSettings } = require('../wasilib/database');
 
 module.exports = {
