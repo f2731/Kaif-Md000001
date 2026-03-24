@@ -32,14 +32,36 @@ function processAndCleanMessage(message) {
         if (!message) return message;
         let cleaned = JSON.parse(JSON.stringify(message));
         
-        // Remove forwarded flags
+        // Remove all forwarding/newsletter/ad metadata
         const targetBlocks = ['extendedTextMessage', 'imageMessage', 'videoMessage', 'audioMessage', 'documentMessage'];
         targetBlocks.forEach(block => {
             if (cleaned[block]?.contextInfo) {
+                // Remove specific forwarding and newsletter labels
+                delete cleaned[block].contextInfo.isForwarded;
+                delete cleaned[block].contextInfo.forwardingScore;
+                delete cleaned[block].contextInfo.forwardedNewsletterMessageInfo;
+                delete cleaned[block].contextInfo.externalAdReply;
+                delete cleaned[block].contextInfo.newsletterJid;
+                delete cleaned[block].contextInfo.newsletterName;
+                delete cleaned[block].contextInfo.newsletterServerMessageId;
+                
+                // Explicitly set to false just in case Baileys defaults to original if missing
                 cleaned[block].contextInfo.isForwarded = false;
                 cleaned[block].contextInfo.forwardingScore = 0;
             }
+            
+            // Handle if the block itself has these fields directly (unlikely but safe)
+            delete cleaned[block]?.isForwarded;
+            delete cleaned[block]?.forwardingScore;
         });
+
+        // Some messages have contextInfo directly on the root under specific structures
+        if (cleaned.contextInfo) {
+            delete cleaned.contextInfo.isForwarded;
+            delete cleaned.contextInfo.forwardingScore;
+            delete cleaned.contextInfo.forwardedNewsletterMessageInfo;
+            cleaned.contextInfo.isForwarded = false;
+        }
 
         // Replace text/captions
         const replaceText = (text) => {

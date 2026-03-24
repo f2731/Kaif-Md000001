@@ -42,23 +42,16 @@ module.exports = {
             return await wasi_sock.sendMessage(wasi_sender, { text: '❌ No valid JIDs found.' });
         }
 
-        // 3. Prepare the Forward Context
-        const contextInfo = {
-            forwardingScore: 999,
-            isForwarded: true,
-            forwardedNewsletterMessageInfo: {
-                newsletterJid: config.newsletterJid || '120363419652241844@newsletter',
-                newsletterName: config.newsletterName || 'WASI-MD-V7',
-                serverMessageId: -1
-            }
-        };
-
+        // 3. Prepare the Forward (No Labels as per user request)
         const mType = Object.keys(quoted).find(k => k.endsWith('Message') || k === 'conversation' || k === 'stickerMessage');
         if (mType && quoted[mType] && typeof quoted[mType] === 'object') {
-            quoted[mType].contextInfo = {
-                ...(quoted[mType].contextInfo || {}),
-                ...contextInfo
-            };
+            // Ensure any existing forwarding labels are stripped
+            if (quoted[mType].contextInfo) {
+                delete quoted[mType].contextInfo.isForwarded;
+                delete quoted[mType].contextInfo.forwardingScore;
+                delete quoted[mType].contextInfo.forwardedNewsletterMessageInfo;
+                quoted[mType].contextInfo.isForwarded = false;
+            }
         }
 
         // 4. Relay Loop

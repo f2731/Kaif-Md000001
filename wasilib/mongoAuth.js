@@ -9,10 +9,24 @@ const AuthStateSchema = new mongoose.Schema({
     _id: false, // We manually set _id
     bufferCommands: true, // Keep buffering but...
     autoCreate: true, // Ensure collection is created
-    bufferTimeoutMS: 5000 // Error out after 5s if still buffering (default is 10s)
+    bufferTimeoutMS: 20000 // Error out after 20s instead of 5s
 });
 
 const useMongoDBAuthState = async (sessionId = 'wasi_session') => {
+    // 0. Ensure Connection is ready
+    if (mongoose.connection.readyState !== 1) {
+        console.log(`⏳ [MongoDB Auth] Waiting for database connection...`);
+        // Wait up to 15 seconds for connection
+        let waitCount = 0;
+        while (mongoose.connection.readyState !== 1 && waitCount < 15) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            waitCount++;
+        }
+        if (mongoose.connection.readyState !== 1) {
+            console.warn(`⚠️ [MongoDB Auth] Database not connected after waiting. Buffering might occur.`);
+        }
+    }
+
     // Dynamic Model
     // We want the collection to be "sessionId.auth" to appear in the folder
     const dbCollectionName = `${sessionId}.authstates`;

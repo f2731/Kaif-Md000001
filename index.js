@@ -14,8 +14,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { wasi_connectSession, wasi_clearSession } = require('./wasilib/session');
-const { wasi_connectDatabase, wasi_getGroupSettings } = require('./wasilib/database');
+const { wasi_connectDatabase, wasi_getGroupSettings, wasi_isDbConnected } = require('./wasilib/database');
 const config = require('./wasi');
+const qrcode = require('qrcode');
 
 const wasi_app = express();
 const wasi_port = process.env.PORT || 3000;
@@ -69,6 +70,32 @@ wasi_app.use(express.static(path.join(__dirname, 'public')));
 // Keep-Alive Route
 wasi_app.get('/ping', (req, res) => res.status(200).send('pong'));
 
+// Dashboard APIs
+wasi_app.get('/api/status', async (req, res) => {
+    const sessionId = config.sessionId || 'wasi_session';
+    const session = sessions.get(sessionId);
+    res.json({
+        connected: session?.isConnected || false,
+        qr: session?.qr || null,
+        dbConnected: wasi_isDbConnected()
+    });
+});
+
+wasi_app.get('/api/config', (req, res) => {
+    // Return minimal config for the dashboard (mostly placeholder for now as per user request to streamline)
+    res.json({
+        sourceJids: [],
+        targetJids: [],
+        oldTextRegex: [],
+        newText: ""
+    });
+});
+
+wasi_app.post('/api/config', (req, res) => {
+    // Stub for saving - for a streamlined bot, user usually manages via .env or commands
+    res.json({ success: true });
+});
+
 // -----------------------------------------------------------------------------
 // SESSION MANAGEMENT
 // -----------------------------------------------------------------------------
@@ -91,10 +118,19 @@ async function startSession(sessionId) {
     sessionState.sock = wasi_sock;
 
     wasi_sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, lastDisconnect, qr } = update;
+
+        if (qr) {
+            try {
+                sessionState.qr = await qrcode.toDataURL(qr);
+            } catch (e) {
+                console.error('Failed to generate QR:', e.message);
+            }
+        }
 
         if (connection === 'close') {
             sessionState.isConnected = false;
+            sessionState.qr = null;
             const statusCode = (lastDisconnect?.error instanceof Boom) ?
                 lastDisconnect.error.output.statusCode : 500;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 440;
@@ -108,6 +144,7 @@ async function startSession(sessionId) {
             }
         } else if (connection === 'open') {
             sessionState.isConnected = true;
+            sessionState.qr = null;
             console.log(`✅ ${sessionId}: Connected to WhatsApp`);
         }
     });
@@ -129,7 +166,7 @@ async function startSession(sessionId) {
             wasi_msg.message.imageMessage?.caption ||
             wasi_msg.message.videoMessage?.caption ||
             wasi_msg.message.documentMessage?.caption || "";
-
+        
         // 1. AUTO FORWARD LOGIC (Background)
         if (wasi_origin.endsWith('@g.us') && !wasi_msg.key.fromMe) {
             try {
@@ -177,7 +214,7 @@ async function startSession(sessionId) {
 
                     // For simplicity, we define isOwner as true if it's the bot itself or listed in config
                     const ownerNum = (config.ownerNumber || '').replace(/\D/g, '');
-                    const isOwner = wasi_msg.key.fromMe || wasi_sender.includes(ownerNum);
+                    const isOwner = wasi_msg.key.fromMe || (ownerNum && wasi_sender.includes(ownerNum));
 
                     await plugin.wasi_handler(wasi_sock, wasi_origin, {
                         wasi_sender,
