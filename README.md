@@ -1,4 +1,4 @@
-# ✨ WASI-LIGHT-MD ✨
+# 🤖 KAIF MD AUTOFORWARD BOT 🤖
 ### Developed by [Mr Wasi (ixxwasi)](https://github.com/ixxwasi)
 
 A streamlined, stable, and high-performance WhatsApp bot focused on **Auto-Forwarding** and core utility commands.
