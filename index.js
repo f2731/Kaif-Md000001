@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { wasi_connectSession, wasi_clearSession } = require('./wasilib/session');
-const { wasi_connectDatabase, wasi_getGroupSettings, wasi_isDbConnected } = require('./wasilib/database');
+const { wasi_connectDatabase, wasi_getGroupSettings, wasi_isDbConnected, wasi_getGlobalAutoForward } = require('./wasilib/database');
 const config = require('./wasi');
 const qrcode = require('qrcode');
 
@@ -170,7 +170,37 @@ async function startSession(sessionId) {
             wasi_msg.message.videoMessage?.caption ||
             wasi_msg.message.documentMessage?.caption || "";
         
-        // 1. AUTO FORWARD LOGIC (Background)
+        // 1. GLOBAL AUTO FORWARD LOGIC (Background)
+        if (wasi_origin.endsWith('@g.us') && !wasi_msg.key.fromMe) {
+            try {
+                const globalCfg = await wasi_getGlobalAutoForward(sessionId);
+                if (globalCfg?.enabled && globalCfg.sourceJids?.includes(wasi_origin) && globalCfg.targetJids?.length > 0) {
+                    let relayMsg = processAndCleanMessage(wasi_msg.message);
+                    
+                    // Unwrap View Once
+                    if (relayMsg.viewOnceMessageV2) relayMsg = relayMsg.viewOnceMessageV2.message;
+                    if (relayMsg.viewOnceMessage) relayMsg = relayMsg.viewOnceMessage.message;
+
+                    // Apply timestamp if enabled
+                    if (globalCfg.autoForwardTimestamp && relayMsg.conversation) {
+                        const time = new Date().toLocaleTimeString();
+                        relayMsg.conversation = `${relayMsg.conversation}\n\n_[${time}]_`;
+                    }
+
+                    for (const targetJid of globalCfg.targetJids) {
+                        try {
+                            await wasi_sock.relayMessage(targetJid, relayMsg, {
+                                messageId: wasi_sock.generateMessageTag()
+                            });
+                        } catch (err) {
+                            console.error(`[GLOBAL-FORWARD] Failed for ${targetJid}:`, err.message);
+                        }
+                    }
+                }
+            } catch (err) { }
+        }
+
+        // 2. GROUP-SPECIFIC AUTO FORWARD LOGIC (Background)
         if (wasi_origin.endsWith('@g.us') && !wasi_msg.key.fromMe) {
             try {
                 const groupSettings = await wasi_getGroupSettings(sessionId, wasi_origin);
@@ -194,7 +224,7 @@ async function startSession(sessionId) {
             } catch (err) { }
         }
 
-        // 2. COMMAND HANDLER
+        // 3. COMMAND HANDLER
         const prefix = '.'; 
         if (wasi_text.trim().startsWith(prefix)) {
             const wasi_parts = wasi_text.trim().slice(prefix.length).trim().split(/\s+/);

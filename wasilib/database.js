@@ -86,11 +86,23 @@ const wasi_groupSettingsSchema = new mongoose.Schema({
     // Antidelete settings
     antidelete: { type: Boolean, default: false },
     antideleteDestination: { type: String, default: 'group' }, // group, owner, both
+    // AutoForward settings
+    autoForward: { type: Boolean, default: false },
+    autoForwardTargets: { type: [String], default: [] },
+    autoForwardTimestamp: { type: Boolean, default: false },
+    autoForwardCaption: { type: String, default: '' },
+    autoForwardReplacements: { type: [{ pattern: String, replacement: String }], default: [] },
     // Other settings
     welcome: { type: Boolean, default: false },
-    goodbye: { type: Boolean, default: false },
-    autoForward: { type: Boolean, default: false },
-    autoForwardTargets: { type: [String], default: [] }
+    goodbye: { type: Boolean, default: false }
+});
+
+const wasi_globalAutoForwardSchema = new mongoose.Schema({
+    enabled: { type: Boolean, default: false },
+    sourceJids: { type: [String], default: [] },
+    targetJids: { type: [String], default: [] },
+    autoForwardTimestamp: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
 });
 
 let isConnected = false;
@@ -118,6 +130,7 @@ function getModel(sessionId, type) {
         case 'MentionConfig': return mongoose.model(modelName, wasi_mentionConfigSchema, collectionName);
         case 'BotConfig': return mongoose.model(modelName, wasi_botConfigSchema, collectionName);
         case 'GroupSettings': return mongoose.model(modelName, wasi_groupSettingsSchema, collectionName);
+        case 'GlobalAutoForward': return mongoose.model(modelName, wasi_globalAutoForwardSchema, collectionName);
         case 'Rank': return mongoose.model(modelName, wasi_rankSchema, collectionName);
         default: throw new Error(`Unknown model type: ${type}`);
     }
@@ -573,6 +586,37 @@ async function wasi_getLeaderboard(sessionId, limit = 10) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// GLOBAL AUTO-FORWARD MANAGEMENT
+// ---------------------------------------------------------------------------
+
+async function wasi_getGlobalAutoForward(sessionId) {
+    if (!isConnected) return null;
+    try {
+        const Model = getModel(sessionId, 'GlobalAutoForward');
+        let config = await Model.findOne({});
+        if (!config) {
+            config = await Model.create({ enabled: false, sourceJids: [], targetJids: [] });
+        }
+        return config;
+    } catch (e) {
+        console.error('DB Error getGlobalAutoForward:', e);
+        return null;
+    }
+}
+
+async function wasi_updateGlobalAutoForward(sessionId, updates) {
+    if (!isConnected) return false;
+    try {
+        const Model = getModel(sessionId, 'GlobalAutoForward');
+        await Model.findOneAndUpdate({}, updates, { upsert: true, new: true });
+        return true;
+    } catch (e) {
+        console.error('DB Error updateGlobalAutoForward:', e);
+        return false;
+    }
+}
+
 module.exports = {
     wasi_connectDatabase,
     wasi_isDbConnected,
@@ -602,6 +646,8 @@ module.exports = {
     wasi_isMentionEnabled,
     wasi_getGroupSettings,
     wasi_updateGroupSettings,
+    wasi_getGlobalAutoForward,
+    wasi_updateGlobalAutoForward,
     wasi_getXP,
     wasi_addXP,
     wasi_getLeaderboard
